@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Map</title>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css"
+        integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ"
+        crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+        integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+        crossorigin="anonymous">
+    <style>
+        canvas {
+            border:1px solid #000;
+            background-color: #000;
+        }
+    </style>
+</head>
+<body onload="initialise()">
+    <div id="body-container" class="container mt-2">
+        <div class="row justify-content-center align-items-center">
+            <canvas id="canvas" class="position-relative"></canvas>
+            <i id="loading-spinner" class="fa fa-spinner fa-spin position-absolute"></i>
+        </div>    
+        <div id="map-controls" class="mt-3">
+            <div class="row justify-content-center align-items-center mb-3">
+                <div class="form-check form-check-inline">
+                    <label class="form-check-label">Render:</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="input-render-temp" onclick="updateMapLayers()">
+                    <label class="form-check-label text-danger" for="input-render-temp">Temperature</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="input-render-rain" onclick="updateMapLayers()">
+                    <label class="form-check-label text-primary" for="input-render-rain">Rainfall</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="input-render-biome" onclick="updateMapLayers()" checked="checked">
+                    <label class="form-check-label text-success" for="input-render-biome">Biomes</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="input-render-height" onclick="updateMapLayers()">
+                    <label class="form-check-label" for="input-render-height">Heightmap</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="input-render-borders" onclick="updateMapLayers()" checked="checked">
+                    <label class="form-check-label" for="input-render-borders">Tile Borders</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="input-render-water" onclick="updateMapLayers()">
+                    <label class="form-check-label text-info" for="input-render-water">Water</label>
+                </div>
+            </div>
+            <div class="row justify-content-center align-items-center mb-3">
+                <div class="form-check form-check-inline">
+                    <label class="form-check-label">Map tiles are:</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" id="input-discovery-visible" checked="checked">
+                    <label class="form-check-label" for="input-discovery-visible">Displayed</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" id="input-discovery-hidden">
+                    <label class="form-check-label" for="input-discovery-hidden">Discoverable</label>
+                </div>
+            </div>
+            <div class="row justify-content-center align-items-center mb-3">
+                <div class="col-auto">
+                    <div class="col-12 text-center" id="map-resize-counter">Map Size: 17</div>
+                    <div class="col-12">
+                        <input type="range" class="custom-range" id="input-resize-range" min="3" max="51" value="17" step="2">
+                    </div>
+                </div>
+                <div class="col-auto d-none d-md-block">
+                    <button type="button" class="btn btn-sm btn-primary input-giant-map">Giant Map</button>
+                </div>
+                <div class="col-auto d-none d-md-block">
+                    <button type="button" class="btn btn-sm btn-primary input-clear-tiles">Clear Tiles</button>
+                </div>
+                <div class="col-auto">
+                    <div class="col-12 text-center" id="map-discovery-counter">Discovery Radius: 2</div>
+                    <div class="col-12">
+                        <input type="range" class="custom-range" id="input-discovery-range" min="0" max="9" value="2" step="1">
+                    </div>
+                </div>
+            </div>
+            <div class="row d-md-none justify-content-center align-items-center mb-3">
+                <div class="col-auto">
+                    <button type="button" class="btn btn-sm btn-primary input-giant-map">Giant Map</button>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-sm btn-primary input-clear-tiles">Clear Tiles</button>
+                </div>
+            </div>
+            <div class="row justify-content-center align-items-center mb-3">
+                <div class="col-auto">
+                    <div class="col-12 text-center" id="render-scale-counter">Map Scale: 5x</div>
+                    <div class="col-12">
+                        <input type="range" class="custom-range" id="input-scale-range" min="1" max="20" value="5" step="1">
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="col-12 text-center" id="render-toct-counter">Height Octaves: 2</div>
+                    <div class="col-12">
+                        <input type="range" class="custom-range" id="input-toct-range" min="1" max="5" value="2" step="1">
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="col-12 text-center" id="render-roct-counter">Rain Octaves: 1</div>
+                    <div class="col-12">
+                        <input type="range" class="custom-range" id="input-roct-range" min="1" max="5" value="1" step="1">
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="col-12 text-center" id="render-tpow-counter">Height Power: 1.5</div>
+                    <div class="col-12">
+                        <input type="range" class="custom-range" id="input-tpow-range" min="0.1" max="3" value="1.5" step="0.1">
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="col-12 text-center" id="render-rpow-counter">Rain Power: 0.9</div>
+                    <div class="col-12">
+                        <input type="range" class="custom-range" id="input-rpow-range" min="0.1" max="3" value="0.9" step="0.1">
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="col-12 text-center text-muted" id="render-water-counter">Water Level: 0.2</div>
+                    <div class="col-12">
+                        <input type="range" class="custom-range" id="input-water-range" min="0.05" max="1" value="0.2" step="0.05" disabled="disabled">
+                    </div>
+                </div>
+            </div>
+            <div class="row justify-content-center align-items-center">
+                <div class="col-auto">
+                    &nbsp;<a class="text-danger" href="#" data-toggle="modal" data-target="#new-map-modal">new map</a>&nbsp;
+                    &nbsp;<a class="text-success" href="#" data-toggle="modal" data-target="#save-map-modal">save map</a>&nbsp;
+                    &nbsp;<a class="text-primary" href="#" data-toggle="modal" data-target="#load-map-modal">load map</a>&nbsp;
+                </div>
+            </div>
+            <div class="row justify-content-center align-items-center">
+                <div class="col-auto">
+                    <small class="text-muted">
+                        <em>id: <span class="token"></span>, <a href="#" data-toggle="modal" data-target="#about-modal">about</a></em>
+                    </small>
+                </div>
+            </div>
+        </div> 
+    </div>
+    <div id="new-map-modal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">New Map</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="form-group">
+                            <label for="new-map-name">Map Name</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="new-map-name" placeholder="Name your map">
+                            </div>
+                            <small class="form-text text-muted">Visible from the loading dialog.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-map-name">Seed</label>
+                            <div class="input-group">
+                                <input type="number" min="-9007199254740991" max="9007199254740991" class="form-control" id="new-map-seed" placeholder="Enter a number">
+                                <div class="input-group-append">
+                                    <button class="btn btn-warning" type="button" id="new-map-seed-random" onclick="randomSeed()">Random</button>
+                                </div>
+                            </div>
+                            <small class="form-text text-muted">Leave blank or set to 0 for a random seed.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-map-name">My ID</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="new-map-token" value="151424970fe5bd33e65c13be1a7308a4" readonly="readonly">
+                            </div>
+                            <small class="form-text text-muted">Remember this to be able to retrieve your maps.</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-dismiss="modal" onclick="newMap()">Create Map</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="save-map-modal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-success">Save Map</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="form-group form-check">
+                            <input type="checkbox" class="form-check-input" id="map-save-check">
+                            <label class="form-check-label" for="map-save-check">Store a cookie on my computer to remember my ID.</label>
+                            <small class="form-text text-muted">Maps are saved automatically to your ID.</small>
+                        </div>
+                    </form>
+                    <small class="form-text text-muted"><em>Current map seed: <span id="seed"></span></em></small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" data-dismiss="modal" onclick="setCookie()">Update Preference</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="load-map-modal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-primary">Load Map</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="form-group">
+                            <label for="new-map-name">My ID</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="load-map-token" placeholder="151424970fe5bd33e65c13be1a7308a4">
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary" type="button" id="load-map-token-button" onclick="loadMapList()">Search</button>
+                                </div>
+                            </div>
+                            <small class="form-text text-muted">Search for maps saved under the ID you enter here.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="load-map-select">Map Name</label>
+                            <div class="input-group">
+                                <select class="custom-select" id="load-map-select">
+                                    <option selected>Choose...</option>
+                                    <option value="1">Overworld</option>
+                                </select>
+                                <div class="input-group-append">
+                                    <button class="btn btn-danger" type="button" id="delete-map-button" onclick="deleteMap()">Delete</button>
+                                </div>
+                            </div>
+                            <small class="form-text text-muted">Select the map to load.</small>
+                        </div>
+                    </form>
+                    <small class="form-text text-muted"><em>Current map name: <span class="name"></span></em></small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="changeId()">Load</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="about-modal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">About Map</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-12">
+                            <p>'Map' is a custom solution to generating infinitely large, procedurally generated, tile based maps using a custom OpenSimplex noise generator based on the tetrahedral-octahedral honeycomb.</p>
+                        </div>
+                        <div class="col-12">
+                            <div class="accordion" id="about-accordion">
+                                <div class="card">
+                                    <div class="card-header" id="about-howto">
+                                        <h5 class="mb-0">
+                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-howto" aria-expanded="false" aria-controls="collapse-howto">
+                                                How to Use 'Map'
+                                            </button>
+                                        </h5>
+                                    </div>
+                                    <div id="collapse-howto" class="collapse" aria-labelledby="about-howto" data-parent="#about-accordion">
+                                        <div class="card-body">
+                                            <h4>Navigating the Map</h4>
+                                            <p>By using the arrow keys or swiping up, down, left, or right on the canvas, you can move the centre of the map by a tile. This is designed for a game in which you can explore a map.</p>
+
+                                            <h4>Render Layers</h4>
+                                            <p>Different layers of the map can be shown or hidden by selecting the checkbox below the canvas.</p>
+                                            <div class="accordion mb-3" id="render-layers-accordion">
+                                                <div class="card">
+                                                    <div class="card-header" id="render-layers-temp">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-temp" aria-expanded="false" aria-controls="collapse-temp">
+                                                                Temperature
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-temp" class="collapse" aria-labelledby="render-layers-temp" data-parent="#render-layers-accordion">
+                                                        <div class="card-body">
+                                                            <p>Displays the noise generation for the temperature of the map.</p>
+                                                            <img src="img/about/temperature.png" class="img-fluid">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card">
+                                                    <div class="card-header" id="render-layers-rain">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-rain" aria-expanded="false" aria-controls="collapse-rain">
+                                                                Rainfall
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-rain" class="collapse" aria-labelledby="render-layers-rain" data-parent="#render-layers-accordion">
+                                                        <div class="card-body">
+                                                            <p>Displays the noise generation for the rainfall of the map.</p>
+                                                            <img src="img/about/rainfall.png" class="img-fluid">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card">
+                                                    <div class="card-header" id="render-layers-biome">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-biome" aria-expanded="false" aria-controls="collapse-biome">
+                                                                Biomes
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-biome" class="collapse" aria-labelledby="render-layers-biome" data-parent="#render-layers-accordion">
+                                                        <div class="card-body">
+                                                            <p>By combining temperature and rainfall values, biomes can be generated.</p>
+                                                            <img src="img/about/biomes.png" class="img-fluid">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card">
+                                                    <div class="card-header" id="render-layers-height">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-height" aria-expanded="false" aria-controls="collapse-height">
+                                                                Heightmap
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-height" class="collapse" aria-labelledby="render-layers-height" data-parent="#render-layers-accordion">
+                                                        <div class="card-body">
+                                                            <p>Maps are actually generated using the heightmap and the rainmap. Temperature is actually just the inverse of the heightmap. This layer can be used to provide shadows and highlights.</p>
+                                                            <img src="img/about/heightmap.png" class="img-fluid">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card">
+                                                    <div class="card-header" id="render-layers-border">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-border" aria-expanded="false" aria-controls="collapse-border">
+                                                                Tile Borders
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-border" class="collapse" aria-labelledby="render-layers-border" data-parent="#render-layers-accordion">
+                                                        <div class="card-body">
+                                                            <p>This layer renders borders between each tile. Not recommended for larger map sizes.</p>
+                                                            <img src="img/about/tileborders.png" class="img-fluid">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card">
+                                                    <div class="card-header" id="render-layers-water">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-water" aria-expanded="false" aria-controls="collapse-water">
+                                                                Water
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-water" class="collapse" aria-labelledby="render-layers-water" data-parent="#render-layers-accordion">
+                                                        <div class="card-body">
+                                                            <p>Choose to render water or not. Water is defined using the heightmap between 0 and a defined level up to 1.</p>
+                                                            <p>Sand is also rendered around the water up to 1.2x the max water level if the Biomes layer is checked.</p>
+                                                            <img src="img/about/water.png" class="img-fluid">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <h4>Visibility Options</h4>
+                                            <p>Map tiles can either be shown or hidden using the 'Displayed' or 'Discoverable' radio buttons.</p>
+                                            <div class="accordion mb-3" id="visibility-accordion">
+                                                <div class="card">
+                                                    <div class="card-header" id="visibility-shown">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-shown" aria-expanded="false" aria-controls="collapse-shown">
+                                                                Displayed Map
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-shown" class="collapse" aria-labelledby="visibility-shown" data-parent="#visibility-accordion">
+                                                        <div class="card-body">
+                                                            <p>Renders all tiles.</p>
+                                                            <img src="img/about/displayed.png" class="img-fluid">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card">
+                                                    <div class="card-header" id="visibility-hidden">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-hidden" aria-expanded="false" aria-controls="collapse-hidden">
+                                                                Discoverable Map
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-hidden" class="collapse" aria-labelledby="visibility-hidden" data-parent="#visibility-accordion">
+                                                        <div class="card-body">
+                                                            <p>Hides tiles unless the user has discovered them by moving to a tile nearby.</p>
+                                                            <div class="container">
+                                                                <div class="row">
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/discoverable.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">Discovery Radius 2.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/radius4.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">Discovery Radius 4.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <h6>Discovery Radius</h6>
+                                                            <p>Tiles are discovered or not based on their distance from the centre of the map. Setting the 'Discovery Radius' to 0 means that only the centre tile is discovered; larger radiuses discover more tiles.</p>
+                                                            <h6>Clearing Tiles</h6>
+                                                            <p class="mb-0">Once discovered, a tile is always visible. Selecting the 'Clear Tiles' button completely forgets all discovered tiles and only re-renders those at the centre of the map within the discovery radius.</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <h4>Map Size</h4>
+                                            <p>The 'Map Size' determines both the width and the height of the map. It has a range between 3 and 51.</p>
+                                            <div class="accordion mb-3" id="size-accordion">
+                                                <div class="card">
+                                                    <div class="card-header" id="size-giant">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-giant" aria-expanded="false" aria-controls="collapse-giant">
+                                                                Giant Map
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-giant" class="collapse" aria-labelledby="size-giant" data-parent="#size-accordion">
+                                                        <div class="card-body">
+                                                            <p class="mb-0">Selecting 'Giant Map' sets the Map Size to 201. This is useful for drawing more realistic maps.</p>
+                                                            <div class="container">
+                                                                <div class="row">
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/size17.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">Map Size 17.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/size51.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">Map Size 51.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/size201.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">Map Size 'Giant' (201).</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card"></div>
+                                            </div>
+
+                                            <h4>Noise Generation Settings</h4>
+                                            <p>The six noise generation settings sliders determine the shape and biome distribution of the final map.</p>
+                                            <div class="accordion mb-3" id="settings-accordion">
+                                                <div class="card">
+                                                    <div class="card-header" id="settings-scale">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-scale" aria-expanded="false" aria-controls="collapse-scale">
+                                                                Scale
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-scale" class="collapse" aria-labelledby="settings-scale" data-parent="#settings-accordion">
+                                                        <div class="card-body">
+                                                            <p>The scale determines how zoomed into a map you are.</p>
+                                                            <div class="container">
+                                                                <div class="row">
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/scale5.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">5x scale.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/scale10.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">10x scale.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card">
+                                                    <div class="card-header" id="settings-octaves">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-octaves" aria-expanded="false" aria-controls="collapse-scale">
+                                                                Octaves
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-octaves" class="collapse" aria-labelledby="settings-octaves" data-parent="#settings-accordion">
+                                                        <div class="card-body">
+                                                            <p>By generating multiple layers of noise at differing frequencies and merging them together we get a more rugged pattern.</p>
+                                                            <div class="container">
+                                                                <div class="row">
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/octave1.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">1st frequency.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/octave2.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">2nd frequency.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/octaver.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">Resultant Pattern.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="row">
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/octaveb1.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">Example 'realistic' map with 1 height octave.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/octaveb5.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">Example 'realistic' map with 5 height octaves.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <p>Both the heightmap and the rainfall layers can have up to five octaves each.</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card">
+                                                    <div class="card-header" id="settings-power">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-power" aria-expanded="false" aria-controls="collapse-power">
+                                                                Powers
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-power" class="collapse" aria-labelledby="settings-power" data-parent="#settings-accordion">
+                                                        <div class="card-body">
+                                                            <p>Powers modify the curve of the noise generation, making higher or lower values more likely depending on the setting.</p>
+                                                            <div class="container">
+                                                                <div class="row">
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/power5.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">0.5 Height Power.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/power10.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">1.0 Height Power.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/power20.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">2.0 Height Power.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <p class="mb-0">Both the heightmap and the rainmap can have their curve adjusted in this way.</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card">
+                                                    <div class="card-header" id="settings-waterlevel">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-waterlevel" aria-expanded="false" aria-controls="collapse-waterlevel">
+                                                                Water Level
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-waterlevel" class="collapse" aria-labelledby="settings-waterlevel" data-parent="#settings-accordion">
+                                                        <div class="card-body">
+                                                            <p>The heightmap ranges between 0 and 1. Anything below the level defined by the water level slider is converted into water if the water layer is checked.</p>
+                                                            <div class="container">
+                                                                <div class="row">
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/water25.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">0.25 Water Level, 1.0 Height Power.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <figure class="figure">
+                                                                            <img src="img/about/water50.png" class="figure-img img-fluid">
+                                                                            <figcaption class="figure-caption">0.5 Water Level, 1.0 Height Power.</figcaption>
+                                                                        </figure>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <h4>Creating and Loading Maps</h4>
+                                            <p>When first visiting this website, a unique ID is generated for you. Any changes you make to the map are stored on the database and linked to your ID. You are able to save multiple maps to your ID and retrieve them using the three links at the bottom of the page.</p>
+                                            <div class="accordion mb-3" id="save-accordion">
+                                                <div class="card">
+                                                    <div class="card-header" id="save-new">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-new" aria-expanded="false" aria-controls="collapse-new">
+                                                                New Maps
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-new" class="collapse" aria-labelledby="save-new" data-parent="#save-accordion">
+                                                        <div class="card-body">
+                                                            <p>Selecting the 'new map' link will open a dialog that allows you to define a new map. It has two options.</p>
+                                                            <p>
+                                                                <strong>Map Name</strong> - The name of the map as it appears in the loading map dialog.<br>
+                                                                <strong>Seed</strong> - A random number between -9007199254740991 and 9007199254740991. This is the seed used by the random number generator that generates the layers of the map. If a map has the same seed, it will always look identical from the same co-ordinates.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card">
+                                                    <div class="card-header" id="save-load">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-load" aria-expanded="false" aria-controls="collapse-load">
+                                                                Loading Maps
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-load" class="collapse" aria-labelledby="save-load" data-parent="#save-accordion">
+                                                        <div class="card-body">
+                                                            <p>Selecting the 'load map' link will open a dialog that allows you to load a pre-existing map. It has two options.</p>
+                                                            <p>
+                                                                <strong>My ID</strong> - Entering an ID here and selecting 'Search' will search for all the maps linked with this ID. Loading any map from a different ID will set your ID to the ID linked with the map. Don't share your ID if you don't want someone else modifying your maps!<br>
+                                                                <strong>Map Name</strong> - The name of the map to load. Selecting 'Delete' will instantly and irrecoverably delete the map selected!
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="card">
+                                                    <div class="card-header" id="save-cookies">
+                                                        <h5 class="mb-0">
+                                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-cookies" aria-expanded="false" aria-controls="collapse-cookies">
+                                                                Cookies
+                                                            </button>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse-cookies" class="collapse" aria-labelledby="save-cookies" data-parent="#save-accordion">
+                                                        <div class="card-body">
+                                                            <p>Selecting the 'save map' link will open a dialog that allows you to set your cookie preferences.</p>
+                                                            <p>By default, your ID is stored as a session cookie and is forgotten when you close the browser. By agreeing to have a cookie stored on your computer, your ID is remembered for up to 10 years from your last access date, so you don't have to worry about forgetting your ID.</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card">
+                                    <div class="card-header" id="about-work">
+                                        <h5 class="mb-0">
+                                            <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapse-work" aria-expanded="false" aria-controls="collapse-work">
+                                                How 'Map' Works
+                                            </button>
+                                        </h5>
+                                    </div>
+                                    <div id="collapse-work" class="collapse" aria-labelledby="about-work" data-parent="#about-accordion">
+                                        <div class="card-body">
+                                            <p><small><em>TODO</em></small></p>
+                                            <h4>Noise Generation</h4>
+                                            <h5>Perlin vs Simplex</h5>
+                                            <h6>Tetrahedral-Octahedral Honeycombs</h6>
+                                            <h6>Scale</h6>
+                                            <h6>Octaves</h6>
+                                            <h6>Exponents</h6>
+
+                                            <h4>Server-Side Movement</h4>
+
+                                            <h4>Storing Map Data</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"
+        integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
+        crossorigin="anonymous"></script>
+    <script src="https://hammerjs.github.io/dist/hammer.min.js"></script>
+    <script src="map.js"></script>
+
+</body>
+</html>
